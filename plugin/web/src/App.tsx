@@ -207,8 +207,10 @@ function Shell() {
             <span className="rail-tip">{label}</span>
             {id === 'tasks' && pendientes > 0 && <span className="rail-badge">{pendientes}</span>}
             {/* Una colisión es lo más urgente que puede enseñar el tablero. */}
-            {id === 'team' && team && team.collisions.length > 0 && (
-              <span className="rail-badge badge-alerta">{team.collisions.length}</span>
+            {id === 'team' && team && team.collisions.length + (team.pieces?.length ?? 0) > 0 && (
+              <span className="rail-badge badge-alerta">
+                {team.collisions.length + (team.pieces?.length ?? 0)}
+              </span>
             )}
           </button>
         ))}
@@ -313,9 +315,9 @@ function Shell() {
                   <h1>Este tablero ya existe, pero no en esta máquina</h1>
                   <p>
                     En la nube hay {enLaNube.pieces} piezas
-                    {enLaNube.people ? ` de ${enLaNube.people} persona${enLaNube.people === 1 ? '' : 's'}` : ''}. El
-                    tablero local solo enseña lo que ha dibujado esta máquina, y los datos suben pero no bajan
-                    solos. Para traértelo:
+                    {enLaNube.people ? ` de ${enLaNube.people} persona${enLaNube.people === 1 ? '' : 's'}` : ''}. Si
+                    esta máquina está vinculada, se están trayendo solas y aparecerán aquí en unos segundos. Para
+                    no esperar:
                   </p>
                   <code>/4code:restore</code>
                   <p>

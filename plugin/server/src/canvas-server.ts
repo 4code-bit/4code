@@ -24,6 +24,7 @@ import {
   type ServerMessage,
 } from '../../shared/diagram.ts'
 import type { ProjectRef } from '../../shared/project.ts'
+import { TOQUE_RECIENTE_MS, type PieceCollision } from '../../shared/team.ts'
 import { clearLock, writeLock } from './lockfile.ts'
 import { sessionsOf } from './sessions.ts'
 import {
@@ -35,6 +36,7 @@ import {
   type ProjectStore,
 } from './store.ts'
 import { startPresence, stopPresence } from './presence.ts'
+import { start as startPull, stopAll as stopPull, type RemoteOperation } from './pull.ts'
 import { enqueue, openBoardWanted, readConfig, resume, status as syncStatus } from './sync.ts'
 import { readTeam } from './team.ts'
 
@@ -116,6 +118,9 @@ function storeFor(project: ProjectRef): ProjectStore {
     log(`tablero abierto: ${project.name} (${project.id}, seq ${store.state.seq})`)
     // Lo que quedó sin subir en una sesión anterior sale ahora.
     resume(project, store.history)
+    // Y lo que hayan dibujado otras máquinas empieza a entrar. Sin token no hace
+    // nada, así que un tablero sin vincular sigue comportándose igual que siempre.
+    startPull(project, { aplicar: ingestRemote, hayPublico: (id) => Boolean(clients.get(id)?.size) })
     startPresence(project)
   }
   return store
@@ -155,10 +160,127 @@ function ingest(project: ProjectRef, operations: Operation[]): { applied: number
     store.record(record)
     // A la nube si está configurada; si no, no hace nada.
     enqueue(project, record)
+    anotarToque(project.id, operation, record.at)
     broadcast(project.id, { type: 'patch', seq: store.state.seq, operation })
   }
 
   return { applied, seq: store.state.seq }
+}
+
+// ── Lo que llega de otras máquinas ──────────────────────────────────────────
+
+/** Qué nodo toca una operación, o `null` si no toca ninguno (aristas, reset). */
+function nodoDe(operation: Operation): string | null {
+  switch (operation.op) {
+    case 'add_node':
+      return operation.node.id
+    case 'update_node':
+    case 'remove_node':
+    case 'set_status':
+    case 'annotate':
+      return operation.id
+    default:
+      return null
+  }
+}
+
+/**
+ * Cuándo tocó ESTA máquina cada pieza, para poder detectar colisiones.
+ *
+ * En memoria y sin persistir a propósito: una colisión es un aviso de «ojo, ahora
+ * mismo», no un hecho del proyecto. Sobrevivir a un reinicio la convertiría en un
+ * registro permanente de quién es dueño de qué, que es justo lo que el tablero no
+ * quiere ser.
+ */
+const toques = new Map<string, Map<string, number>>()
+const colisiones = new Map<string, Map<string, PieceCollision>>()
+
+function anotarToque(projectId: string, operation: Operation, at: number): void {
+  const id = nodoDe(operation)
+  if (!id) return
+  let porNodo = toques.get(projectId)
+  if (!porNodo) {
+    porNodo = new Map()
+    toques.set(projectId, porNodo)
+  }
+  porNodo.set(id, at)
+}
+
+/**
+ * Aplica lo que bajó de la nube.
+ *
+ * Es `ingest()` menos una línea, y esa línea es la importante: **no llama a
+ * `enqueue`**. Lo que viene de fuera no vuelve a salir, y además queda marcado con
+ * `remote: true` para que ni el reenvío de arranque ni un `push` manual lo
+ * devuelvan. Sin eso, dos máquinas se pasan la misma operación para siempre.
+ *
+ * El `at` que se guarda es el original, no el de ahora: la vista de Actividad
+ * cuenta cuándo pasaron las cosas, no cuándo se enteró este disco.
+ */
+function ingestRemote(project: ProjectRef, operaciones: RemoteOperation[]): void {
+  const store = storeFor(project)
+
+  for (const remota of operaciones) {
+    if (!applyOperation(store.state, remota.operation)) continue
+    store.state.seq++
+
+    const record = {
+      seq: store.state.seq,
+      at: remota.at,
+      operation: remota.operation,
+      ...(remota.branch && { branch: remota.branch }),
+      remote: true as const,
+      ...(remota.author && { author: remota.author }),
+    }
+    store.record(record)
+    anotarColision(project.id, remota, store)
+    broadcast(project.id, { type: 'patch', seq: store.state.seq, operation: remota.operation })
+  }
+}
+
+/**
+ * ¿Ha tocado alguien una pieza que yo también estaba tocando?
+ *
+ * Gana la última operación —el orden lo marca el `seq` del servidor, que es
+ * global— pero callarse el choque sería mentir por omisión: quien mira vería su
+ * cambio deshacerse sin explicación. Se avisa dentro de la misma ventana que usa
+ * la atribución del lienzo, para no llamar colisión a algo de anteayer.
+ */
+function anotarColision(projectId: string, remota: RemoteOperation, store: ProjectStore): void {
+  const id = nodoDe(remota.operation)
+  if (!id || !remota.author) return
+
+  const mio = toques.get(projectId)?.get(id)
+  if (!mio || remota.at - mio > TOQUE_RECIENTE_MS) return
+
+  let porNodo = colisiones.get(projectId)
+  if (!porNodo) {
+    porNodo = new Map()
+    colisiones.set(projectId, porNodo)
+  }
+
+  const previa = porNodo.get(id)
+  const theirs = previa?.theirs.filter((t) => t.author !== remota.author) ?? []
+  theirs.push({ author: remota.author, at: remota.at })
+
+  porNodo.set(id, {
+    nodeId: id,
+    label: store.state.nodes.get(id)?.label ?? id,
+    yours: mio,
+    theirs,
+  })
+}
+
+/** Las colisiones vivas de un proyecto, ya caducadas las viejas. */
+export function boardCollisions(projectId: string): PieceCollision[] {
+  const porNodo = colisiones.get(projectId)
+  if (!porNodo) return []
+
+  const corte = Date.now() - TOQUE_RECIENTE_MS
+  for (const [id, c] of porNodo) {
+    if (c.yours < corte) porNodo.delete(id)
+  }
+  return [...porNodo.values()]
 }
 
 // ── ¿Existe ya arriba? ──────────────────────────────────────────────────────
@@ -336,7 +458,10 @@ const server = createServer(async (req, res) => {
     }
     // `idle=1`: el sondeo de fondo, el que solo alimenta el aviso de colisión. Se le
     // sirve de una caché mucho más larga y sin salir a la red.
-    json(res, 200, await readTeam(proyecto.root, url.searchParams.get('idle') === '1'))
+    const equipo = await readTeam(proyecto.root, url.searchParams.get('idle') === '1')
+    // Las de pieza salen de memoria, así que no pagan la caché de git ni la
+    // merecen: son de este proceso y están al día por definición.
+    json(res, 200, { ...equipo, pieces: boardCollisions(projectId) })
     return
   }
 
@@ -619,6 +744,7 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
     clearLock()
     stopPresence()
+    stopPull()
     // Los snapshots pendientes se escriben antes de salir: el historial ya está
     // en disco, pero sin esto el próximo arranque tendría que reproducirlo entero.
     for (const store of stores.values()) store.flush()

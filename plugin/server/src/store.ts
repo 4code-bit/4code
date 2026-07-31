@@ -51,6 +51,17 @@ export interface AppliedRecord {
   at: number
   operation: Operation
   branch?: string
+  /**
+   * Bajó de la nube: la escribió otra máquina.
+   *
+   * **Es lo que corta el bucle.** El `seq` de este registro es local, así que sin
+   * la marca el envío lo vería como pendiente —`seq > acked`— y lo devolvería a
+   * la nube, que se lo reenviaría a la otra máquina, que volvería a subirlo. Los
+   * filtros de `sync.ts` y `cloud.ts` la miran; no se quita sin quitar eso.
+   */
+  remote?: true
+  /** Quién la hizo, cuando vino de fuera. El login de GitHub. */
+  author?: string
 }
 
 interface SnapshotFile {

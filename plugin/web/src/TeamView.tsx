@@ -137,6 +137,34 @@ export function TeamView({ team, project }: { team: Team | null; project: Projec
         </section>
       )}
 
+      {/*
+        Colisiones sobre el tablero, no sobre ficheros. Van justo debajo de las de
+        git porque son la misma pregunta por el otro canal, y separadas porque lo
+        que se hace con ellas es distinto: aquí el cambio ya se aplicó y lo único
+        accionable es mirar si sigue diciendo lo que querías.
+      */}
+      {(team.pieces?.length ?? 0) > 0 && (
+        <section className="collisions">
+          <div className="task-group-head">
+            <span className="dot dot-problem" />
+            <h2>Piezas tocadas a la vez</h2>
+            <span className="count">{team.pieces!.length}</span>
+            <span className="task-group-hint">Gana el último cambio, pero conviene mirarlo</span>
+          </div>
+          <ul className="task-list">
+            {team.pieces!.map((c) => (
+              <li key={c.nodeId} className="task status-problem">
+                <span className="task-path">{c.label}</span>
+                <span className="task-detail">
+                  tú {hace(c.yours)} ·{' '}
+                  {c.theirs.map((t) => `${t.author} ${hace(t.at)}`).join(' · ')}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="task-group">
         <div className="task-group-head">
           <span className="dot dot-building" />

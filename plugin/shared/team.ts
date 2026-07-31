@@ -46,12 +46,53 @@ export interface Collision {
   theirs: { author: string; branch: string; at: number }[]
 }
 
+/**
+ * Cuánto tiempo se considera que sigues «en» una pieza.
+ *
+ * Una hora, la misma que usa la atribución del lienzo. Lo bastante larga para
+ * cubrir «me fui a comer y vuelvo», y lo bastante corta para que el tablero no se
+ * convierta en un registro permanente de quién es dueño de qué.
+ */
+export const TOQUE_RECIENTE_MS = 60 * 60_000
+
+/**
+ * Dos personas han tocado la misma pieza del tablero casi a la vez.
+ *
+ * El hermano de `Collision`, pero sobre nodos en vez de ficheros, y por eso vive
+ * aquí: es la misma pregunta —«¿voy a chocar con alguien?»— resuelta por el otro
+ * canal. Aquella la contesta git; esta, el log de operaciones de la nube.
+ *
+ * Gana la última operación, siempre: el orden lo marca el `seq` del servidor, que
+ * es global y no se repite. Esto no cambia quién gana, solo impide que el cambio
+ * de alguien desaparezca sin que se entere.
+ */
+export interface PieceCollision {
+  nodeId: string
+  /** El nombre visible, para no obligar a la interfaz a buscarlo. */
+  label: string
+  /** Cuándo la tocaste tú. */
+  yours: number
+  theirs: { author: string; at: number }[]
+}
+
 export interface TeamView {
   /** Rama actual de quien mira. */
   currentBranch: string | null
   branches: BranchInfo[]
   teammates: TeammateActivity[]
   collisions: Collision[]
+  /**
+   * Colisiones sobre piezas del tablero, no sobre ficheros.
+   *
+   * Viajan con el resto del equipo en vez de por un canal propio porque son la
+   * misma pregunta y se miran en el mismo sitio: quien abre esta vista quiere
+   * saber con quién va a chocar, y le da igual si lo ha averiguado git o la nube.
+   * De paso heredan el sondeo que ya existe, incluido el de fondo que alimenta el
+   * aviso del rail.
+   *
+   * Opcional: las deriva el canvas-server, no `readTeam()`, que solo sabe de git.
+   */
+  pieces?: PieceCollision[]
   /** Cuándo se leyó git por última vez. */
   readAt: number
   /** Si el repositorio no tiene remoto, aquí no hay equipo que ver. */

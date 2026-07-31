@@ -112,25 +112,64 @@ export function writeConfig(config: CloudConfig): void {
   cacheConfig = null
 }
 
-/** Último `seq` que la nube confirmó, por proyecto. */
+/** Las dos marcas de sincronización de un proyecto. */
 function markerPath(projectId: string): string {
   return join(PROJECTS_DIR, projectId, 'sync.json')
 }
 
-export function readAcked(projectId: string): number {
+/**
+ * Comparten fichero pero **no significan lo mismo, y no se pueden mezclar**:
+ *
+ *   acked        último `seq` LOCAL que la nube confirmó al subir
+ *   remoteAcked  último `seq` DEL SERVIDOR que esta máquina ya bajó
+ *
+ * Son numeraciones distintas —una la lleva este disco, la otra la lleva Mongo—
+ * y confundirlas romperia los dos sentidos a la vez: se dejaría de subir lo que
+ * nunca subió, o se rebajaría lo ya aplicado. De ahí que la escritura fusione en
+ * vez de sobrescribir el objeto entero.
+ */
+interface Marca {
+  acked?: number
+  remoteAcked?: number
+  at?: number
+}
+
+function readMarca(projectId: string): Marca {
   try {
-    return (JSON.parse(readFileSync(markerPath(projectId), 'utf8')) as { acked?: number }).acked ?? 0
+    return JSON.parse(readFileSync(markerPath(projectId), 'utf8')) as Marca
   } catch {
-    return 0
+    return {}
   }
 }
 
-export function writeAcked(projectId: string, acked: number): void {
+function writeMarca(projectId: string, patch: Marca): void {
   try {
-    writeFileSync(markerPath(projectId), JSON.stringify({ acked, at: Date.now() }), 'utf8')
+    const previa = readMarca(projectId)
+    writeFileSync(
+      markerPath(projectId),
+      JSON.stringify({ ...previa, ...patch, at: Date.now() }),
+      'utf8',
+    )
   } catch (err) {
     log('no se pudo guardar la marca de sincronización:', err)
   }
+}
+
+export function readAcked(projectId: string): number {
+  return readMarca(projectId).acked ?? 0
+}
+
+export function writeAcked(projectId: string, acked: number): void {
+  writeMarca(projectId, { acked })
+}
+
+/** Hasta dónde ha bajado ya esta máquina. En `seq` de servidor. */
+export function readRemoteAcked(projectId: string): number {
+  return readMarca(projectId).remoteAcked ?? 0
+}
+
+export function writeRemoteAcked(projectId: string, remoteAcked: number): void {
+  writeMarca(projectId, { remoteAcked })
 }
 
 interface Cola {
@@ -152,6 +191,10 @@ const colas = new Map<string, Cola>()
  */
 export function enqueue(project: ProjectRef, record: AppliedRecord): void {
   if (!readConfig() || !project.remote?.startsWith('github.com/')) return
+  // Lo que bajó de la nube no vuelve a subir. `pull.ts` ya no llama aquí, pero la
+  // guarda se queda: es un bucle infinito entre dos máquinas, y el día que alguien
+  // encole desde otro sitio no se va a acordar de esto.
+  if (record.remote) return
 
   let cola = colas.get(project.id)
   if (!cola) {
@@ -176,7 +219,7 @@ async function enviar(cola: Cola): Promise<void> {
 
   cola.enVuelo = true
   const acked = readAcked(cola.project.id)
-  const lote = cola.pendientes.filter((r) => r.seq > acked).slice(0, MAX_LOTE)
+  const lote = cola.pendientes.filter((r) => r.seq > acked && !r.remote).slice(0, MAX_LOTE)
 
   if (lote.length === 0) {
     cola.pendientes = []
@@ -234,7 +277,9 @@ export function resume(project: ProjectRef, history: AppliedRecord[]): void {
   if (!readConfig() || !project.remote?.startsWith('github.com/')) return
 
   const acked = readAcked(project.id)
-  const pendientes = history.filter((r) => r.seq > acked)
+  // `!r.remote`: al arrancar, el historial ya trae mezcladas las operaciones que
+  // bajaron de otras máquinas. Sin el filtro, cada reinicio las devolvería todas.
+  const pendientes = history.filter((r) => r.seq > acked && !r.remote)
   if (pendientes.length === 0) return
 
   log(`${project.name}: ${pendientes.length} operación(es) sin sincronizar, reenviando`)

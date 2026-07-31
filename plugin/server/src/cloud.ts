@@ -342,7 +342,9 @@ async function push(): Promise<void> {
      * reenvíos. `sync.ts` ya lo hacía bien; esto copia su forma.
      */
     const acked = readAcked(proyecto.id)
-    const pendientes = historialDe(proyecto.id).filter((r) => r.seq > acked)
+    // `!r.remote` por lo mismo que en `sync.ts`: el historial lleva mezcladas las
+    // operaciones que bajaron de otras máquinas, y devolverlas sería un bucle.
+    const pendientes = historialDe(proyecto.id).filter((r) => r.seq > acked && !r.remote)
     if (pendientes.length === 0) {
       li(`  ${proyecto.name.padEnd(24)} al día`)
       li(`  ${' '.repeat(24)} ${tableroUrl(config.apiUrl, proyecto.id)}`)
