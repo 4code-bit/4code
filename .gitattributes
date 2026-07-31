@@ -1,0 +1,6 @@
+# La interfaz construida se versiona (ver .gitignore) y no se toca.
+#
+# Sin esto, git normaliza los finales de línea del JS y el CSS al clonarlos, así
+# que lo que se sirve deja de ser byte a byte lo que salió del build — y el diff
+# de cada reconstrucción es el fichero entero. Son artefactos, no fuente.
+plugin/web/dist/** -text -diff linguist-generated

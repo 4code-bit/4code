@@ -1,0 +1,45 @@
+# Secretos — nunca, bajo ningún concepto
+.env
+.env.*
+!.env.example
+
+# Dependencias
+node_modules/
+
+# Builds
+.next/
+out/
+dist/
+build/
+
+# Excepción: la interfaz del tablero SÍ se versiona.
+#
+# El plugin se instala clonando este repositorio, así que lo que no esté aquí no
+# llega a la máquina de quien lo instala. Sin esto el canvas-server arranca, sirve
+# el diagrama por API y devuelve «no encontrado» a cualquiera que abra la URL que
+# él mismo acaba de imprimir.
+#
+# La alternativa —construirlo al instalar— exige Vite y React en cada máquina:
+# cientos de megas y un build en el primer arranque para abrir un tablero. Son
+# tres ficheros y medio mega. El riesgo de versionar un artefacto es que se quede
+# viejo, y de eso se ocupa `verify/build.ts`.
+!plugin/web/dist/
+!plugin/web/dist/**
+
+# Logs
+*.log
+npm-debug.log*
+
+# Estado local del prototipo
+.4code-canvas.json
+.4code.lock
+
+# Sistema
+.DS_Store
+Thumbs.db
+.vercel
+*.tsbuildinfo
+
+# Tableros exportados: llevan rutas de proyectos privados
+4code-*.json
+copia-tablero-*.json

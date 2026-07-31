@@ -1,0 +1,33 @@
+{
+  "name": "4code-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Plugin de Claude Code: el tablero en vivo, los hooks de captura y la sincronización con la nube.",
+  "engines": {
+    "node": ">=22.6"
+  },
+  "//engines": "El plugin va sin compilar: necesita un Node que ejecute .ts. De serie desde 22.18 y 23.6; con `--experimental-strip-types` desde 22.6, que es lo que le pone `launch.mjs`. Por debajo, el lanzador lo dice con palabras en vez de morir con un error de sintaxis.",
+  "scripts": {
+    "canvas": "node launch.mjs server/src/canvas-server.ts",
+    "mcp": "node launch.mjs server/src/mcp-server.ts",
+    "cloud": "node launch.mjs server/src/cloud.ts",
+    "board": "node launch.mjs server/src/board.ts",
+    "verify": "node launch.mjs verify/core.ts && node launch.mjs verify/hooks.ts && node launch.mjs verify/dagre-stability.ts && node launch.mjs verify/build.ts",
+    "web:dev": "npm --prefix web run dev",
+    "web:build": "npm --prefix web run build"
+  },
+  "//deps": "Solo las de ejecución. El hook de SessionStart las instala una vez en ${CLAUDE_PLUGIN_DATA}, que sobrevive a las actualizaciones del plugin. SIN workspaces a propósito: ese patrón copia este fichero a otro directorio, donde los workspaces no existirían y npm install fallaría. Las de la web viven en web/package.json.",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.21.0",
+    "ws": "^8.18.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@types/ws": "^8.18.1"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
+  }
+}

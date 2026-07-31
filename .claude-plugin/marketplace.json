@@ -1,0 +1,15 @@
+{
+  "name": "4code",
+  "description": "El observatorio para Claude Code y lo que se construya a su alrededor.",
+  "owner": {
+    "name": "Elian Paludi",
+    "url": "https://github.com/4code-bit"
+  },
+  "plugins": [
+    {
+      "name": "4code",
+      "source": "./plugin",
+      "description": "Un observatorio para Claude Code: mientras trabajas, el tablero dibuja la arquitectura de tu proyecto y registra qué se ha hecho. Tu código nunca sale de tu máquina."
+    }
+  ]
+}

@@ -1,0 +1,1858 @@
+:root {
+  --bg: #0c0d12;
+  --bg-2: #12141c;
+  --line: #232634;
+  --text: #e6e8f0;
+  --muted: #8a8fa3;
+
+  --module: #5b7cfa;
+  --service: #3fb59a;
+  --file: #8a8fa3;
+  --datastore: #d99a3c;
+  --external: #9b6bd6;
+  --note: #6b7280;
+  --decision: #e0699a;
+
+  /* Lente de negocio. Gama propia y deliberadamente más cálida que la técnica:
+     con las dos lentes encendidas a la vez, la temperatura del color separa los
+     dos mundos antes de que el ojo llegue a leer el glifo. */
+  --offer: #f07a4a;
+  --campaign: #ee5f9c;
+  --channel: #4bb7d1;
+  --segment: #86cf6e;
+  --goal: #f2d05b;
+
+  --done: #3fb59a;
+  --building: #d99a3c;
+  --problem: #e05561;
+  --planned: #5a5f73;
+
+  /* El gris de lo que está bien. La mayoría del tablero vive aquí: hecho y sin
+     estado comparten borde, porque ninguno de los dos pide nada de ti. */
+  --neutro: #2f3446;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  display: flex;
+  height: 100%;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ── Rail de vistas ─────────────────────────────────────────────────────── */
+
+.rail {
+  flex: 0 0 auto;
+  width: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 0;
+  background: #0a0b0f;
+  border-right: 1px solid var(--line);
+}
+
+.rail-brand {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.02em;
+  margin-bottom: 10px;
+  user-select: none;
+}
+
+.rail-brand span {
+  color: var(--module);
+}
+
+.rail-btn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 140ms, background 140ms, border-color 140ms;
+}
+
+.rail-btn:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.rail-btn.active {
+  color: var(--module);
+  background: rgba(91, 124, 250, 0.12);
+  border-color: rgba(91, 124, 250, 0.32);
+}
+
+/* El tablero de negocio se enciende en su propio color. Los dos lienzos se
+   parecen mucho —son el mismo componente— y sin esto es fácil creerse que estás
+   en el técnico y pensar que se han borrado la mitad de las piezas. */
+.rail-btn.rail-business.active {
+  color: var(--offer);
+  background: color-mix(in srgb, var(--offer) 12%, transparent);
+  border-color: color-mix(in srgb, var(--offer) 32%, transparent);
+}
+
+/* Etiqueta al pasar por encima: el rail es de iconos y sin esto hay que
+   adivinar qué hace cada uno. */
+.rail-tip {
+  position: absolute;
+  left: 46px;
+  white-space: nowrap;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 12px;
+  color: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-4px);
+  transition: opacity 120ms, transform 120ms;
+  z-index: 20;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+}
+
+.rail-btn:hover .rail-tip {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.rail-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--building);
+  color: #14161e;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 15px;
+  text-align: center;
+}
+
+.rail-conn {
+  margin-top: auto;
+  display: grid;
+  place-items: center;
+  height: 26px;
+}
+
+/* ── Barra superior ─────────────────────────────────────────────────────── */
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+  flex: 0 0 auto;
+}
+
+.bar-project {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.bar-root {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 320px;
+}
+
+/* ── Dónde vive este tablero ─────────────────────────────────────────────────
+   Un chip discreto en la barra, y detrás la explicación entera con el comando
+   que hace falta. La pregunta «¿esto está subido?» no se contestaba en ninguna
+   parte de esta pantalla, y el silencio se leía como un sí. */
+
+.cloud {
+  position: relative;
+}
+
+.cloud-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 120ms, color 120ms;
+}
+
+.cloud-chip:hover {
+  border-color: var(--neutro);
+  color: var(--text);
+}
+
+.cloud-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--planned);
+  flex: 0 0 auto;
+}
+
+.cloud-en-la-nube .cloud-dot {
+  background: var(--done);
+}
+
+.cloud-sin-vincular .cloud-dot {
+  background: var(--building);
+}
+
+.cloud-pop {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  width: 380px;
+  max-width: calc(100vw - 48px);
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-2);
+  box-shadow: 0 18px 44px rgb(0 0 0 / 0.55);
+}
+
+.cloud-pop h3 {
+  margin: 0 0 6px;
+  font-size: 13.5px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.cloud-pop p {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.cloud-pop code {
+  display: block;
+  margin: 0 0 10px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11.5px;
+  overflow-x: auto;
+  white-space: nowrap;
+  /* Se selecciona de un doble clic: esto se va a pegar en una terminal. */
+  user-select: all;
+}
+
+.cloud-how {
+  margin-bottom: 5px !important;
+  font-size: 12px !important;
+}
+
+.cloud-warn {
+  margin-bottom: 0 !important;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--building) !important;
+}
+
+.cloud-link {
+  display: inline-block;
+  margin-bottom: 10px;
+  color: var(--module);
+  font-size: 12.5px;
+  text-decoration: none;
+}
+
+.cloud-link:hover {
+  text-decoration: underline;
+}
+
+.cloud-orphan {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.cloud-orphan strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.brand {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.brand-sub {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+.project-picker {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 5px 9px;
+  font: inherit;
+  font-size: 12.5px;
+  max-width: 260px;
+  cursor: pointer;
+}
+
+.project-picker:hover {
+  border-color: var(--module);
+}
+
+/* El conmutador de lente que vivía aquí se quitó al separar los dos tableros en
+   vistas propias del rail: la lente la dice ahora en qué vista estás, y dos
+   controles para lo mismo se contradicen a la primera. */
+
+.stats {
+  display: flex;
+  margin-left: auto;
+  gap: 14px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.conn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.conn-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.conn-live .conn-dot {
+  background: var(--done);
+  box-shadow: 0 0 0 0 rgba(63, 181, 154, 0.6);
+  animation: pulse 2.4s infinite;
+}
+
+.conn-live {
+  color: var(--done);
+}
+
+.conn-offline .conn-dot {
+  background: var(--problem);
+}
+
+@keyframes pulse {
+  70% {
+    box-shadow: 0 0 0 7px rgba(63, 181, 154, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(63, 181, 154, 0);
+  }
+}
+
+/* ── Escenario ──────────────────────────────────────────────────────────── */
+
+.stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Las vistas de lista scrollean; el lienzo no, que se mueve solo. */
+.stage-scroll {
+  overflow-y: auto;
+}
+
+/* Alineado a la izquierda y no centrado: centrar deja dos franjas negras enormes
+   en pantalla ancha, y además el hueco de la derecha es donde entra el panel de
+   detalle sin tapar nada. */
+.view {
+  max-width: 1020px;
+  padding: 26px 30px 60px;
+}
+
+/* Las tareas van a dos columnas y 1020 px las dejaba estranguladas. Ancho propio
+   en vez de subir el de todas las vistas: una lista de texto a 1500 px se lee
+   peor, no mejor. */
+.view-tasks {
+  max-width: 1560px;
+}
+
+.view-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 26px;
+}
+
+.view-head h1 {
+  font-size: 21px;
+  font-weight: 640;
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.view-sub {
+  margin: 5px 0 0;
+  font-size: 12.5px;
+  color: var(--muted);
+  max-width: 62ch;
+  line-height: 1.5;
+}
+
+.view-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  text-align: center;
+  padding: 40px;
+  color: var(--muted);
+}
+
+.view-empty h2 {
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.view-empty p {
+  margin: 0;
+  max-width: 46ch;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ── Progreso ───────────────────────────────────────────────────────────── */
+
+.progress {
+  flex: 0 0 auto;
+  width: 190px;
+}
+
+.progress-label {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+  margin-bottom: 6px;
+}
+
+.progress-label span {
+  color: var(--text);
+  font-weight: 640;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-track {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--module), var(--done));
+  transition: width 500ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ── Tareas ─────────────────────────────────────────────────────────────── */
+
+.task-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+}
+
+/* ── Columnas de tareas ──────────────────────────────────────────────────── */
+
+/* Dos columnas SIEMPRE: técnica y negocio, aunque una esté vacía. La simetría es
+   el mensaje — un proyecto tiene las dos mitades te hayas ocupado de ellas o no. */
+.task-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 26px;
+  align-items: start;
+}
+
+/* Una debajo de otra cuando no caben. El orden del DOM ya es el correcto:
+   técnica primero. */
+@media (max-width: 1000px) {
+  .task-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.task-column-vacia {
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+  padding: 16px 0;
+  border-bottom: 1px dashed var(--line);
+}
+
+.task-column {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  min-width: 0;
+}
+
+.task-column-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--line);
+}
+
+.task-column-head h2 {
+  font-size: 14.5px;
+  font-weight: 640;
+  margin: 0;
+}
+
+.task-column-head p {
+  flex: 1 0 100%;
+  font-size: 11.5px;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* Cada columna se firma con el color de su lente, el mismo del conmutador y el
+   de los nodos: tres sitios distintos diciendo lo mismo sin una sola palabra. */
+.task-column.lens-business .task-column-head {
+  border-bottom-color: color-mix(in srgb, var(--offer) 45%, transparent);
+}
+
+.task-column.lens-tech .task-column-head {
+  border-bottom-color: color-mix(in srgb, var(--module) 45%, transparent);
+}
+
+.task-group-head h3 {
+  font-size: 13px;
+  font-weight: 620;
+  margin: 0;
+}
+
+.task-group-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 11px;
+}
+
+.task-group-head h2 {
+  font-size: 13px;
+  font-weight: 620;
+  margin: 0;
+}
+
+.count {
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.task-group-hint {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-left: auto;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--planned);
+  flex: 0 0 auto;
+}
+
+.dot-done {
+  background: var(--done);
+}
+.dot-building {
+  background: var(--building);
+}
+.dot-problem {
+  background: var(--problem);
+}
+.dot-planned {
+  background: var(--planned);
+}
+
+.task-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  /* Más aire que en una lista normal: las tarjetas en curso y las rotas llevan
+     halo, y a 6px los difuminados de dos vecinas se pisaban. */
+  gap: 10px;
+}
+
+/* Una tarjeta ES un nodo del tablero, estirado al ancho de la columna.
+   Mismas medidas, mismo marco, mismo gradiente, mismo halo y mismo destello: lo
+   único que cambia es que aquí sobra ancho y hay más que contar, así que la caja
+   crece hacia abajo en vez de recortar. Que sea literalmente el mismo lenguaje
+   es lo que permite saltar del tablero a las tareas sin recalibrar el ojo. */
+.task {
+  position: relative;
+  width: 100%;
+  text-align: left;
+  /* Igual que `.node`: un solo color por caja, del estado, y el tipo por forma. */
+  --estado: var(--neutro);
+  --glifo: var(--text);
+  padding: 0 14px 10px;
+  border-radius: 14px;
+  border: 1.5px solid var(--estado);
+  background: linear-gradient(180deg, #171a24 0%, #14161e 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 1px;
+  overflow: visible;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: border-color 140ms, box-shadow 140ms;
+}
+
+/* La esquina, calcada de `.node-tab`: cuadrada por fuera contra el borde y
+   redondeada por dentro, color macizo del estado y el glifo en negativo. */
+.task-tab {
+  position: absolute;
+  top: -1.5px;
+  left: -1.5px;
+  width: 40px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: var(--estado);
+  color: var(--glifo);
+  font-size: 19px;
+  line-height: 1;
+  border-radius: 13px 0 13px 0;
+}
+
+.task:hover {
+  border-color: color-mix(in srgb, var(--estado) 70%, var(--text));
+}
+
+/* La tarjeta que se está arrastrando se queda como hueco: lo que importa
+   mientras dura el gesto es dónde va a caer, no de dónde salió. */
+.task.dragging {
+  opacity: 0.4;
+  border-style: dashed;
+}
+
+/* Marca discreta de que ese orden lo pusiste tú y no lo dedujo nadie. */
+.task-orden {
+  margin-left: 6px;
+  font-size: 10.5px;
+  color: var(--muted);
+  vertical-align: middle;
+}
+
+/* Desde cuándo está así. Es la línea que convierte «en curso» en información:
+   en curso desde hace una hora y desde hace nueve días no son lo mismo. */
+.task-desde {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.task-desde.encallada {
+  color: var(--building);
+}
+
+/* Mismo destello que en el tablero, y por el mismo motivo: enterarte de que
+   Claude acaba de tocar algo mientras lo estás mirando. */
+.task.fresh {
+  animation: flash 1.1s ease-out;
+}
+
+/* Lo que espera a otra cosa. Se pinta en rojo aunque la tarjeta no esté en
+   `problem`: el problema es de otro, pero el que no avanza eres tú. */
+.task-bloqueo {
+  font-size: 11.5px;
+  color: var(--problem);
+}
+
+.task-bloqueo em {
+  font-style: normal;
+  color: var(--muted);
+}
+
+/* Lo que se está quedando parado por culpa de esta pieza. En ámbar: no es un
+   fallo de esta tarea, es su coste. */
+.task-frena {
+  font-size: 11.5px;
+  color: var(--building);
+}
+
+/* Lo bloqueado lleva un anillo rojo fino, no el halo entero: el halo es de quien
+   TIENE el problema, y esta caja solo lo está sufriendo. Se distingue de un
+   `status-problem` en que ahí el rojo es el borde y el difuminado; aquí es una
+   línea de aviso alrededor de un estado que sigue siendo el suyo. */
+.task.bloqueada {
+  box-shadow:
+    0 0 0 1.5px color-mix(in srgb, var(--problem) 60%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* El aviso de cruce entre lentes: lo primero de la pantalla porque es lo único
+   que ninguna de las dos mitades del equipo puede ver por su cuenta. */
+.task-aviso {
+  display: block;
+  margin-bottom: 22px;
+  padding: 11px 14px;
+  border: 1px solid color-mix(in srgb, var(--problem) 45%, transparent);
+  background: color-mix(in srgb, var(--problem) 11%, transparent);
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.task-aviso strong {
+  color: var(--problem);
+}
+
+/* Terminado en gris, no en verde — la misma decisión que en el tablero: si todo
+   lo hecho va de color sale un mar verde y el ámbar de lo que está en curso deja
+   de saltar. Que está cerrado ya lo dice la opacidad. */
+.task.status-done {
+  --estado: var(--neutro);
+  opacity: 0.62;
+}
+.task.status-building {
+  --estado: var(--building);
+  --glifo: #14161e;
+}
+.task.status-problem {
+  --estado: var(--problem);
+  --glifo: #14161e;
+}
+.task.status-planned {
+  --estado: var(--planned);
+  border-style: dashed;
+  opacity: 0.62;
+}
+
+/* El halo, solo donde reclama algo — la misma regla que en el tablero. En una
+   lista larga hace el mismo trabajo que allí: el ojo va solo a lo que está en
+   curso o roto sin leer un título. */
+.task.status-building,
+.task.status-problem {
+  box-shadow:
+    0 0 22px -4px color-mix(in srgb, var(--estado) 70%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Título a la altura de la esquina de color, para que lean como una sola línea.
+   Mismos 34px y mismo apartado de 38 que en el nodo. */
+.task-label {
+  font-size: 15px;
+  font-weight: 560;
+  color: var(--text);
+  height: 34px;
+  line-height: 34px;
+  margin-left: 38px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* La ruta arranca bajo el glifo y a la izquierda, no centrada como en el nodo:
+   ahí el ancho era de 200px y había que aprovecharlo, aquí sobra sitio y una
+   columna de textos alineados se barre mucho más rápido. */
+.task-path {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-detail {
+  font-size: 12.5px;
+  color: #a8adbf;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Actividad ──────────────────────────────────────────────────────────── */
+
+.timeline-day {
+  margin-bottom: 26px;
+}
+
+.timeline-date {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  margin: 0 0 12px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  padding: 6px 0;
+  z-index: 2;
+}
+
+.timeline-day ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.event {
+  display: grid;
+  grid-template-columns: 46px 16px 1fr;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.event-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.event-marker {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--line);
+  justify-self: center;
+  /* La línea que une los puntos: convierte una lista en una cronología. */
+  box-shadow: 0 12px 0 -2.5px var(--line);
+}
+
+.event:last-child .event-marker {
+  box-shadow: none;
+}
+
+.tone-add .event-marker {
+  background: var(--module);
+}
+.tone-status .event-marker {
+  background: var(--building);
+}
+.tone-link .event-marker {
+  background: var(--service);
+}
+.tone-remove .event-marker {
+  background: var(--problem);
+}
+
+.event-verb {
+  color: var(--muted);
+}
+
+.event-text strong {
+  font-weight: 600;
+}
+
+.event-extra {
+  color: var(--muted);
+}
+
+.event-status {
+  font-size: 11.5px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+/* ── Piezas ─────────────────────────────────────────────────────────────── */
+
+.filters {
+  display: flex;
+  gap: 9px;
+  margin-bottom: 16px;
+}
+
+.search {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 11px;
+  color: var(--muted);
+}
+
+.search:focus-within {
+  border-color: var(--module);
+}
+
+.search input {
+  flex: 1 1 auto;
+  background: none;
+  border: none;
+  outline: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.filters select {
+  background: var(--bg-2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.filters-empty {
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 40px 0;
+}
+
+.pieces {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.piece {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  text-align: left;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 11px 13px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: border-color 140ms, background 140ms;
+}
+
+.piece:hover {
+  background: #171a24;
+  border-color: #32374a;
+}
+
+.piece-glyph {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--accent, var(--muted));
+  flex: 0 0 auto;
+}
+
+.piece.kind-module .piece-glyph {
+  color: var(--module);
+}
+.piece.kind-service .piece-glyph {
+  color: var(--service);
+}
+.piece.kind-file .piece-glyph {
+  color: var(--file);
+}
+.piece.kind-datastore .piece-glyph {
+  color: var(--datastore);
+}
+.piece.kind-external .piece-glyph {
+  color: var(--external);
+}
+.piece.kind-offer .piece-glyph {
+  color: var(--offer);
+}
+.piece.kind-campaign .piece-glyph {
+  color: var(--campaign);
+}
+.piece.kind-channel .piece-glyph {
+  color: var(--channel);
+}
+.piece.kind-segment .piece-glyph {
+  color: var(--segment);
+}
+.piece.kind-goal .piece-glyph {
+  color: var(--goal);
+}
+.piece.kind-decision .piece-glyph {
+  color: var(--decision);
+}
+.piece.kind-note .piece-glyph {
+  color: var(--note);
+}
+
+.piece-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.piece-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.piece-label {
+  font-size: 13.5px;
+  font-weight: 560;
+}
+
+.piece-path {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.piece-detail {
+  font-size: 12.5px;
+  color: #a8adbf;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.piece-meta {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.piece-link {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  color: var(--module);
+}
+
+.piece-link:hover {
+  background: rgba(91, 124, 250, 0.14);
+  border-color: rgba(91, 124, 250, 0.45);
+}
+
+.piece-degree {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  min-width: 18px;
+  text-align: right;
+}
+
+/* ── Sesiones ───────────────────────────────────────────────────────────── */
+
+/* Capa de trabajo (§4.3). `unknown` va deliberadamente apagada: "sin determinar"
+   es una respuesta honesta y no debe competir por la atención con una real. */
+.layer {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 2px 9px;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.layer-planning {
+  color: var(--external);
+}
+.layer-ui {
+  color: var(--decision);
+}
+.layer-code {
+  color: var(--module);
+}
+.layer-tests {
+  color: var(--done);
+}
+.layer-infra {
+  color: var(--datastore);
+}
+.layer-docs {
+  color: #8fa3c8;
+}
+.layer-exploring {
+  color: var(--muted);
+}
+.layer-unknown {
+  color: #5a5f73;
+  border-style: dashed;
+}
+
+.sessions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.session {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.session-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 9px;
+}
+
+.session-when {
+  font-size: 13px;
+  font-weight: 560;
+}
+
+/* Solo la inicial: `capitalize` convertiría "martes, 28 de julio" en
+   "Martes, 28 De Julio", que en español está mal. */
+.session-when::first-letter {
+  text-transform: uppercase;
+}
+
+.session-dur,
+.session-source {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.session-open {
+  font-size: 11px;
+  color: var(--done);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.session-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.session-stats strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.session-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 9px;
+}
+
+.tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 7px;
+  color: #a8adbf;
+}
+
+.tool-chip.agent {
+  color: var(--external);
+  border-color: rgba(155, 107, 214, 0.35);
+}
+
+.tool-n {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+/* ── Equipo ─────────────────────────────────────────────────────────────── */
+
+/* El badge de colisión no es informativo, es una alerta: rojo y no ámbar. */
+.badge-alerta {
+  background: var(--problem);
+  color: #fff;
+}
+
+.collisions {
+  margin-bottom: 26px;
+  border: 1px solid rgba(224, 85, 97, 0.28);
+  background: rgba(224, 85, 97, 0.05);
+  border-radius: 11px;
+  padding: 14px 16px;
+}
+
+.branch-you {
+  color: var(--building);
+  font-weight: 400;
+}
+
+.session-files {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.react-flow {
+  background: var(--bg);
+}
+
+/* La animación de la transición es la mitad del trabajo perceptual: el humano
+   sigue el movimiento en lugar de perder el nodo. Evidencia: Archambault &
+   Purchase — anima primero, perfecciona la estabilidad del layout después. */
+.react-flow__node {
+  transition: transform 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.react-flow__node.dragging {
+  transition: none;
+}
+
+.react-flow__edge-path {
+  transition: d 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* ── Etiquetas de las aristas ────────────────────────────────────────────────
+   En reposo, casi invisibles: son veintitantas palabras sueltas flotando sobre
+   el lienzo y leerlas todas a la vez no es el trabajo de nadie. Al pasar por
+   encima, la que te interesa se vuelve una pastilla legible y su cable se
+   enciende — así se sigue de un extremo al otro sin perderlo entre los demás. */
+.react-flow__edge-text {
+  fill: var(--muted);
+  font-size: 10px;
+  transition: fill 120ms;
+}
+
+.react-flow__edge-textbg {
+  fill: transparent;
+  transition: fill 120ms;
+}
+
+.react-flow__edge:hover .react-flow__edge-text {
+  fill: var(--text);
+}
+
+.react-flow__edge:hover .react-flow__edge-textbg {
+  fill: var(--bg-2);
+}
+
+/* El halo sale de `currentColor`, que es el color que la arista lleva en su
+   `style`. Así cada tipo de relación se enciende del suyo sin duplicar aquí la
+   tabla de colores de `EDGE_STYLE`. */
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 2.6;
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+/* Mientras se arrastra, no. La transición está para que el ojo siga al nodo
+   cuando dagre recoloca; durante el gesto el humano ya sabe dónde va el nodo y
+   lo único que aporta es un cable colgando 380 ms por detrás del cursor.
+   Es el equivalente para las aristas de `.react-flow__node.dragging`. */
+.react-flow.arrastrando .react-flow__edge-path {
+  transition: none;
+  /* Y sin halo: arrastrando pasas el ratón por encima de medio tablero sin
+     querer, y encender cables al vuelo estorba justo cuando hacen falta
+     frames. */
+  filter: none;
+}
+
+/* ── Nodos ──────────────────────────────────────────────────────────────── */
+
+/* width/height deben coincidir con NODE_W / NODE_H de layout.ts: dagre coloca
+   las cajas con esas medidas y si aquí se dibuja otra, las aristas no encajan. */
+.node {
+  position: relative;
+  width: 200px;
+  height: 74px;
+  /* Un nodo, un color. Borde, esquina y conectores salen todos de aquí: tres
+     colores dentro de la misma caja no jerarquizan nada, solo compiten.
+     El tipo lo dice el glifo — la forma es el otro canal, y es el que aguanta
+     siete valores sin volverse ilegible. */
+  --estado: var(--neutro);
+  --glifo: var(--text);
+  /* El hueco de la esquina de color lo aparta el título, no la caja: así el
+     subtítulo puede ocupar el ancho entero por debajo del glifo. */
+  padding: 0 12px 6px;
+  border-radius: 14px;
+  /* El borde dice el ESTADO, no el tipo.
+     El tipo es estático y se consulta; el estado cambia y es lo que te hace
+     mirar, así que se lleva el canal más llamativo. Y en silencio por defecto:
+     si todo tiene color, nada destaca. El tipo se queda en la esquina, donde
+     lo que jerarquiza es el área — una pastilla es un acento, el borde de la
+     caja entera es un grito. */
+  border: 1.5px solid var(--estado, var(--neutro));
+  background: linear-gradient(180deg, #171a24 0%, #14161e 100%);
+  display: flex;
+  flex-direction: column;
+  /* Desde arriba, no centrado: el título tiene que caer a la altura de la
+     esquina de color, no flotar a media caja. */
+  justify-content: flex-start;
+  gap: 1px;
+  /* Visible, no `hidden`: los conectores sobresalen del borde a propósito y
+     `hidden` los cortaba por la mitad. Los textos ya se recortan ellos. */
+  overflow: visible;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* La esquina: cuadrada por fuera contra el borde del nodo y redondeada por
+   dentro. Es el único sitio donde el color va macizo, así que es lo primero
+   que ve el ojo y por eso lleva el dato que más se busca — qué tipo de pieza
+   es. El glifo va en el fondo oscuro del lienzo, no en blanco: sobre un color
+   saturado el negativo se lee mejor que el positivo. */
+.node-tab {
+  position: absolute;
+  top: -1.5px;
+  left: -1.5px;
+  width: 40px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: var(--estado);
+  color: var(--glifo);
+  font-size: 19px;
+  line-height: 1;
+  border-radius: 13px 0 13px 0;
+}
+
+.kind-module {
+  --accent: var(--module);
+}
+.kind-service {
+  --accent: var(--service);
+}
+.kind-file {
+  --accent: var(--file);
+}
+.kind-datastore {
+  --accent: var(--datastore);
+}
+.kind-external {
+  --accent: var(--external);
+}
+.kind-offer {
+  --accent: var(--offer);
+}
+.kind-campaign {
+  --accent: var(--campaign);
+}
+.kind-channel {
+  --accent: var(--channel);
+}
+.kind-segment {
+  --accent: var(--segment);
+}
+.kind-goal {
+  --accent: var(--goal);
+}
+.kind-note {
+  --accent: var(--note);
+}
+.kind-decision {
+  --accent: var(--decision);
+}
+
+/* Fuera: el borde y la esquina ya dicen el estado, y el punto era un tercer
+   sitio para el mismo dato. Solo sobrevive el de "en curso", porque lo que
+   aporta no es el color sino el parpadeo — que algo se está moviendo ahora. */
+.node-dot {
+  display: none;
+}
+
+.node-dot.dot-building {
+  display: block;
+  position: absolute;
+  top: 10px;
+  right: 11px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* Los colores de los puntos ya están arriba, con los de las listas. Aquí solo
+   el parpadeo, que es lo que dice "esto se está moviendo ahora". */
+.dot-building {
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.28;
+  }
+}
+
+.node-label {
+  font-weight: 560;
+  font-size: 15px;
+  /* La misma altura que la esquina de color, para que título y glifo queden a
+     la misma altura y lean como una sola línea. Va con `line-height` y no con
+     `display: flex` porque el ellipsis no funciona dentro de un contenedor
+     flex, y este título se recorta a menudo.
+     De paso resuelve lo de siempre: con una caja de línea holgada, `overflow:
+     hidden` ya no come los acentos de "Facturación" ni la 'g' de "Landing".
+     `flex: 0 0 auto` es la otra mitad — si no, flex encoge los hijos. */
+  height: 34px;
+  line-height: 34px;
+  /* Lo que aparta el título de la esquina de color (40px menos los 12 de
+     padding de la caja). */
+  margin-left: 38px;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-path {
+  /* Ocupa la banda de abajo entera y centrado en ella: empieza bajo el glifo,
+     no bajo el título. */
+  flex: 1 1 auto;
+  line-height: 32px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* `rtl` recorta por el principio, que en una ruta es lo prescindible:
+     `…/src/auth/login.ts` dice más que `D:/proyectos/mi-app/sr…`. */
+  direction: rtl;
+  text-align: center;
+}
+
+/* Verde para "hecho" está tentador, pero si el 70% del tablero está terminado
+   sale un mar verde y el ámbar deja de saltar. Terminar algo ya lo canta el
+   destello de `.node.fresh`, que es cuando importa. */
+.node.status-done {
+  --estado: var(--neutro);
+}
+
+/* Sobre un color saturado el glifo va en negativo: se lee mejor que en claro. */
+.node.status-building {
+  --estado: var(--building);
+  --glifo: #14161e;
+}
+
+.node.status-problem {
+  --estado: var(--problem);
+  --glifo: #14161e;
+}
+
+.node.status-planned {
+  --estado: var(--planned);
+  border-style: dashed;
+  opacity: 0.62;
+}
+
+/* El halo, solo donde reclama algo.
+   A veinte cajas era ruido y costaba caro de repintar; a las seis que están en
+   curso o rotas es exactamente lo contrario: el ojo va solas a ellas desde el
+   otro lado de la pantalla, aunque estés alejado y no leas ni el título.
+   Estático a propósito — un blur animado sí es caro; el parpadeo se queda en el
+   punto, que solo mueve opacidad. */
+.node.status-building,
+.node.status-problem {
+  box-shadow:
+    0 0 22px -4px color-mix(in srgb, var(--estado) 70%, transparent),
+    0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Mientras se arrastra, no: el blur repinta un área bastante mayor que la caja
+   y es justo cuando hay que ir sobrado de frames. */
+.react-flow.arrastrando .node {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* Seleccionado: el mismo color del nodo, pero encendido por dentro y por
+   fuera. Va después de las reglas de estado a propósito — misma especificidad,
+   gana la última, y aquí queremos que la selección mande sobre el halo.
+
+   El grosor se hace con un anillo de sombra y no subiendo `border-width`:
+   engordar el borde de verdad movería el contenido un píxel y dejaría una
+   rendija entre la caja y la esquina de color, que va pegada al borde.
+
+   El color se aclara mezclándolo con el texto: en los nodos grises —que son la
+   mayoría del tablero— el gris a secas apenas se distinguiría del estado
+   normal, y una selección que no se ve no es una selección. */
+.node.selected {
+  --seleccion: color-mix(in srgb, var(--estado) 78%, var(--text));
+  border-color: var(--seleccion);
+  box-shadow:
+    0 0 0 1.5px var(--seleccion),
+    0 0 22px -2px color-mix(in srgb, var(--seleccion) 70%, transparent),
+    inset 0 0 18px -5px color-mix(in srgb, var(--seleccion) 90%, transparent);
+}
+
+/* Destello de lo que Claude acaba de tocar: sin esto no se ve QUÉ cambió. */
+.node.fresh {
+  animation: flash 1.1s ease-out;
+}
+
+@keyframes flash {
+  0% {
+    box-shadow: 0 0 0 0 rgba(91, 124, 250, 0.65);
+    border-color: var(--accent);
+  }
+  100% {
+    box-shadow: 0 0 0 16px rgba(91, 124, 250, 0);
+  }
+}
+
+/* Los conectores se ven, y del color del nodo: sin ellos no se sabe por dónde
+   entra ni sale una relación hasta que sigues el cable con el ojo. El anillo
+   del color del fondo los despega del borde y del cable. */
+.react-flow__handle {
+  width: 11px;
+  height: 11px;
+  background: var(--estado, var(--neutro));
+  border: 2.5px solid var(--bg);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.react-flow__handle-top {
+  top: -7px;
+}
+
+.react-flow__handle-bottom {
+  bottom: -7px;
+}
+
+/* ── Estado vacío ───────────────────────────────────────────────────────── */
+
+.empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+  pointer-events: none;
+  padding: 24px;
+}
+
+.empty h1 {
+  font-size: 21px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.empty p {
+  color: var(--muted);
+  max-width: 44ch;
+  margin: 0;
+}
+
+.empty code {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--muted);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 11px;
+  margin-top: 6px;
+  user-select: all;
+  pointer-events: auto;
+}
+
+/* ── Panel de detalle ───────────────────────────────────────────────────── */
+
+.panel {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 306px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  padding: 16px 18px 18px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
+}
+
+.panel-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.panel-close:hover {
+  color: var(--text);
+}
+
+.panel-kind {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.panel h2 {
+  font-size: 16px;
+  margin: 3px 0 8px;
+}
+
+.panel-path {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--muted);
+  word-break: break-all;
+  margin-bottom: 9px;
+}
+
+.panel-status {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  margin-bottom: 11px;
+}
+
+.panel-detail {
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0 0 12px;
+}
+
+/* Enlace a la pieza funcionando (§4.5). Solo aparece si `safeUrl` lo aprueba. */
+.panel-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--module);
+  text-decoration: none;
+  background: rgba(91, 124, 250, 0.09);
+  border: 1px solid rgba(91, 124, 250, 0.28);
+  border-radius: 7px;
+  padding: 7px 10px;
+  margin-bottom: 12px;
+  word-break: break-all;
+}
+
+.panel-link:hover {
+  background: rgba(91, 124, 250, 0.16);
+  border-color: rgba(91, 124, 250, 0.5);
+}
+
+.panel-link-icon {
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
+.panel-action {
+  width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: border-color 140ms, background 140ms;
+}
+
+.panel-action:hover {
+  border-color: var(--module);
+  background: rgba(91, 124, 250, 0.1);
+}
+
+.panel-id {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 10.5px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  padding-top: 9px;
+  word-break: break-all;
+}
+
+/* ── Leyenda ────────────────────────────────────────────────────────────── */
+
+.legend {
+  display: flex;
+  gap: 8px;
+  padding: 8px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--bg-2);
+  flex: 0 0 auto;
+}
+
+.chip {
+  font-size: 11.5px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+
+/* Lo que el filtro se ha llevado. Es un botón, no un cartel: enterarte de que
+   falta algo y poder recuperarlo son el mismo gesto. */
+.chip-oculto {
+  margin-left: auto;
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  border-radius: 999px;
+  padding: 1px 10px;
+  cursor: pointer;
+}
+
+.chip-oculto:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+.status-done {
+  color: var(--done);
+}
+.status-building {
+  color: var(--building);
+}
+.status-problem {
+  color: var(--problem);
+}
+.status-planned {
+  color: var(--planned);
+}
+
+/* ── Controles de React Flow ────────────────────────────────────────────── */
+
+.react-flow__controls-button {
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+  fill: var(--muted);
+}
+
+.react-flow__controls-button:hover {
+  background: var(--line);
+}
+
+.react-flow__minimap {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}

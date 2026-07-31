@@ -1,0 +1,6 @@
+node_modules/
+*.log
+
+# El build de la web sí se versiona: al instalar un plugin, Claude Code copia su
+# directorio tal cual, y sin `web/dist` el canvas-server no tendría nada que
+# servir en el navegador. Se regenera con `npm run web:build`.

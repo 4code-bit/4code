@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "tablero": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/launch.mjs", "server/src/mcp-server.ts"],
+      "env": {
+        "NODE_PATH": "${CLAUDE_PLUGIN_DATA}/node_modules"
+      }
+    }
+  }
+}

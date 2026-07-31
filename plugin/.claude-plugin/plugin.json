@@ -1,0 +1,10 @@
+{
+  "name": "4code",
+  "description": "Un observatorio para Claude Code: mientras trabajas, el tablero dibuja la arquitectura de tu proyecto y registra qué se ha hecho. Tu código nunca sale de tu máquina.",
+  "author": {
+    "name": "Elian Paludi"
+  },
+  "homepage": "https://github.com/4code-bit/4code",
+  "repository": "https://github.com/4code-bit/4code",
+  "license": "UNLICENSED"
+}
