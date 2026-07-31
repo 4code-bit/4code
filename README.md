@@ -15,6 +15,13 @@ Claude que diagrame y los comandos. **No hay que tocar ningún `settings.json` n
 instalar nada por separado**, que era exactamente el problema de la versión anterior:
 seis pasos manuales, uno de ellos con una ruta absoluta al disco de otra persona.
 
+Hace falta **git en el PATH**: instalar el plugin es clonar un repositorio, así que sin
+git el primer comando falla antes de llegar a ninguna parte. El tablero también lo usa
+para saber en qué proyecto estás. Ojo si instalas desde la terminal de un editor: esa
+terminal heredó el PATH de cuando el editor arrancó, así que si git o Node llegaron
+después hay que **cerrar el editor entero** y volver a abrirlo — el panel no basta.
+Comprueba con `git --version` y `node --version` en la terminal donde vas a escribir.
+
 Hace falta **Node 22.6 o superior** (24 recomendado): el plugin va sin compilar, así
 que necesita un Node que ejecute `.ts`. De 22.6 a 22.17 se lo pide con
 `--experimental-strip-types`; por debajo, lo dice con palabras al arrancar en vez de
