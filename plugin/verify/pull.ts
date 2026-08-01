@@ -61,6 +61,10 @@ const ajenas = [
 let sirvioAjenas = 0
 /** Cualquier petición, del tipo que sea. Lo que mide la aditividad de §2.4. */
 let peticiones = 0
+/** Solo los GET de operaciones: lo que mide si el cliente insiste tras un «no». */
+let getsOps = 0
+/** Con esto puesto, la nube responde 402 como si el tablero no tuviera plan. */
+let responder402 = false
 
 const nube = createServer((req, res) => {
   peticiones++
@@ -83,6 +87,12 @@ const nube = createServer((req, res) => {
   }
 
   if (req.method === 'GET' && url.pathname.endsWith('/ops')) {
+    getsOps++
+    if (responder402) {
+      res.writeHead(402, { 'content-type': 'application/json' })
+      res.end(JSON.stringify({ error: 'sin plan de equipo', plan: 'required' }))
+      return
+    }
     const after = Number(url.searchParams.get('after') ?? 0)
     // Solo la primera vez: después, el cursor del cliente ya va por delante. Si
     // las sirviera siempre, el test pasaría aunque el cursor no se guardase.
@@ -299,6 +309,84 @@ solo.kill('SIGTERM')
 await sleep(400)
 try {
   rmSync(HOME_SOLO, { recursive: true, force: true })
+} catch {
+  /* Windows a veces retiene el directorio un instante */
+}
+
+/**
+ * El muro de pago: un «no» no se reintenta, y no rompe el tablero.
+ *
+ * Cuando el plan del tablero no incluye equipo, la API responde 402. Dos cosas
+ * tienen que pasar y una tercera no: el cliente para de pedirlo, el tablero local
+ * sigue entero, y NO entra en el backoff — insistir cada diez segundos sería
+ * pedirle a la nube que repita un «no» que no va a cambiar hasta que alguien pague.
+ */
+console.log('\nSin plan de equipo, la bajada se para sin romper nada')
+
+const HOME_402 = mkdtempSync(join(tmpdir(), '4code-pull-402-'))
+const PORT_402 = 41994
+const BASE_402 = `http://127.0.0.1:${PORT_402}`
+writeFileSync(
+  join(HOME_402, 'config.json'),
+  JSON.stringify({ apiUrl: `http://127.0.0.1:${NUBE_PORT}`, token: 'tok', openBoard: false }),
+  'utf8',
+)
+
+responder402 = true
+const antesDe402 = getsOps
+
+const sinPlan = spawn(process.execPath, nodeArgs(CANVAS), {
+  env: {
+    ...process.env,
+    FOURCODE_HOME: HOME_402,
+    FOURCODE_PORT: String(PORT_402),
+    FOURCODE_TOKEN: TOKEN,
+    FOURCODE_OPEN: '0',
+  },
+  stdio: ['ignore', 'ignore', 'ignore'],
+})
+
+let listo402 = false
+for (let i = 0; i < 60 && !listo402; i++) {
+  try {
+    const res = await fetch(`${BASE_402}/health`, { signal: AbortSignal.timeout(500) })
+    listo402 = res.ok
+  } catch {
+    /* todavía no */
+  }
+  if (!listo402) await sleep(150)
+}
+
+if (listo402) {
+  await fetch(`${BASE_402}/ops`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-fourcode-token': TOKEN },
+    body: JSON.stringify({
+      project: proyecto,
+      operations: [{ op: 'add_node', node: { id: 'service:sin-plan', kind: 'service', label: 'Sin plan' } }],
+    }),
+  })
+  // Más que el primer backoff (10 s), para que un reintento se note.
+  await sleep(13_000)
+
+  const intentos = getsOps - antesDe402
+  check('pide una vez y acepta el «no»', intentos === 1, { intentos })
+
+  const res = await fetch(`${BASE_402}/state?project=${encodeURIComponent(proyecto.id)}`)
+  const estado = (await res.json()) as { nodes: { id: string }[] }
+  check(
+    'y el tablero local sigue entero',
+    estado.nodes.some((n) => n.id === 'service:sin-plan'),
+    estado.nodes.map((n) => n.id),
+  )
+} else {
+  check('el canvas-server sin plan arranca', false)
+}
+
+sinPlan.kill('SIGTERM')
+await sleep(400)
+try {
+  rmSync(HOME_402, { recursive: true, force: true })
 } catch {
   /* Windows a veces retiene el directorio un instante */
 }

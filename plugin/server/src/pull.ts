@@ -138,6 +138,23 @@ async function tirar(ciclo: Ciclo, hooks: PullHooks): Promise<void> {
       }
 
       /**
+       * 402: el tablero no tiene plan de equipo.
+       *
+       * No es un fallo, así que no entra en el backoff: reintentarlo cada diez
+       * segundos sería pedirle a la nube que repita un «no» que no va a cambiar
+       * hasta que alguien pague. Se para y ya está.
+       *
+       * Y no rompe nada: el tablero local sigue funcionando entero, con lo que
+       * dibuja esta máquina. Lo que no llega es lo de los demás — que es
+       * exactamente lo que se paga.
+       */
+      if (res.status === 402) {
+        log('este tablero no incluye trabajo en equipo: la bajada queda parada')
+        ciclo.detenido = true
+        return
+      }
+
+      /**
        * 404 no es un error que merezca reintentos rápidos. Significa una de dos:
        * este repositorio todavía no tiene tablero arriba, o esta cuenta no lo
        * alcanza. Las dos responden igual a propósito (§4.13), y en ninguna hay
